@@ -10,6 +10,7 @@ interface FacilityMapProps {
   facilities: Facility[];
   fitUser: boolean;
   focus: Facility | null;
+  controlsBottomPx: number;
 }
 
 export function FacilityMap({
@@ -17,6 +18,7 @@ export function FacilityMap({
   facilities,
   fitUser,
   focus,
+  controlsBottomPx,
 }: FacilityMapProps) {
   const ref = useRef<HTMLDivElement | null>(null);
   const { panToUser, fitAll, error } = useKakaoMap(ref, {
@@ -34,9 +36,10 @@ export function FacilityMap({
           {error}
         </p>
       )}
-      <MapLegend />
+      <MapLegend bottomPx={controlsBottomPx} />
       <MyLocationButton
         hasUser={Boolean(user)}
+        bottomPx={controlsBottomPx}
         onPanToUser={panToUser}
         onFitAll={fitAll}
       />
@@ -44,9 +47,12 @@ export function FacilityMap({
   );
 }
 
-function MapLegend() {
+function MapLegend({ bottomPx }: { bottomPx: number }) {
   return (
-    <div className="absolute left-3 top-16 z-20 rounded-2xl border-2 border-slate-200 bg-white/90 px-3 py-2 text-xs font-black text-slate-800 shadow-lg">
+    <div
+      className="absolute left-3 z-20 rounded-2xl border-2 border-slate-200 bg-white/90 px-3 py-2 text-xs font-black text-slate-800 shadow-lg"
+      style={{ bottom: bottomPx }}
+    >
       <div className="flex items-center gap-2">
         <span className="h-3 w-3 rounded-full bg-red-600" />
         24시간

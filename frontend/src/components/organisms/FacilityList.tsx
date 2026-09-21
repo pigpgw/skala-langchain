@@ -7,6 +7,8 @@ interface FacilityListProps {
   facilities: Facility[];
   user: Coords | null;
   focus: Facility | null;
+  emptyTitle?: string;
+  emptyDescription?: string;
   onFocus: (facility: Facility) => void;
 }
 
@@ -15,6 +17,8 @@ export function FacilityList({
   facilities,
   user,
   focus,
+  emptyTitle = "표시할 병원이 없습니다",
+  emptyDescription = "좌표가 확인된 병원이 있을 때 지도와 목록에 함께 표시됩니다.",
   onFocus,
 }: FacilityListProps) {
   return (
@@ -33,10 +37,10 @@ export function FacilityList({
       {facilities.length === 0 ? (
         <div className="rounded-2xl border-2 border-dashed border-slate-300 bg-white p-4">
           <p className="text-xl font-black text-slate-800">
-            주변 기관을 확인 중입니다
+            {emptyTitle}
           </p>
           <p className="mt-2 text-base leading-7 font-semibold text-slate-600">
-            위치 권한을 허용했거나 증상 안내를 받은 뒤 병원 목록이 표시됩니다.
+            {emptyDescription}
           </p>
         </div>
       ) : (

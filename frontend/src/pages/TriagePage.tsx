@@ -43,7 +43,8 @@ function hasMapCoords(facility: Facility) {
 export function TriagePage() {
   const { status: geoStatus, coords } = useGeolocation();
   const nearbySearchCoords = coords ?? DEFAULT_MAP_CENTER;
-  const { facilities: nearby } = useNearbyFacilities(nearbySearchCoords);
+  const { facilities: nearby, isLoading: isNearbyLoading } =
+    useNearbyFacilities(nearbySearchCoords);
   const { result, isLoading, error, submit } = useTriage();
   const [focus, setFocus] = useState<Facility | null>(null);
   const [panelView, setPanelView] = useState<PanelView>("nearby");
@@ -61,6 +62,9 @@ export function TriagePage() {
     [rawFacilities],
   );
   const hiddenFacilityCount = rawFacilities.length - mapFacilities.length;
+  const actualUserCoords = geoStatus === "ready" ? coords : null;
+  const mapCountLabel =
+    isNearbyLoading && !result ? "확인 중" : `${mapFacilities.length}곳`;
   const sortedFacilities = useMemo(
     () =>
       [...mapFacilities].sort(
@@ -70,7 +74,7 @@ export function TriagePage() {
   );
   const caption = result
     ? "증상 안내 결과"
-    : nearby === null
+    : isNearbyLoading
       ? "주변 병원 확인 중"
       : mapFacilities.length > 0
         ? `가까운 병원 ${mapFacilities.length}곳`
@@ -193,10 +197,11 @@ export function TriagePage() {
     <main className="relative h-[calc(100dvh-8.75rem)] overflow-hidden bg-slate-100">
       <section data-tour="map-section" className="absolute inset-0">
         <FacilityMap
-          user={coords}
+          user={actualUserCoords}
           facilities={mapFacilities}
           fitUser={!result}
           focus={focus}
+          controlsBottomPx={sheetHeight + 12}
         />
       </section>
 
@@ -206,7 +211,7 @@ export function TriagePage() {
           className="inline-flex max-w-full flex-wrap items-center gap-2 rounded-full border-2 border-blue-200 bg-white/90 px-3 py-2 text-xs font-black shadow-lg"
         >
           <span className="rounded-full bg-blue-700 px-2.5 py-1 text-white">
-            {mapFacilities.length > 0 ? `${mapFacilities.length}곳` : "확인 중"}
+            {mapCountLabel}
           </span>
           <span className="text-slate-800">{caption}</span>
           {hiddenFacilityCount > 0 && (
@@ -252,8 +257,9 @@ export function TriagePage() {
             {visiblePanelView === "nearby" && (
               <NearbyPanel
                 facilities={sortedFacilities}
-                user={coords}
+                user={actualUserCoords}
                 focus={focus}
+                isLoading={isNearbyLoading}
                 onFocus={setFocus}
                 onOpenSymptom={() => setPanelView("symptom")}
               />
@@ -275,7 +281,9 @@ export function TriagePage() {
                 reason={result.triage.reason}
                 caution={result.triage.caution}
                 facilities={sortedFacilities}
-                user={coords}
+                user={actualUserCoords}
+                notice={result.notice}
+                hiddenFacilityCount={hiddenFacilityCount}
                 focus={focus}
                 onFocus={setFocus}
               />
@@ -383,12 +391,14 @@ function NearbyPanel({
   facilities,
   user,
   focus,
+  isLoading,
   onFocus,
   onOpenSymptom,
 }: {
   facilities: Facility[];
   user: FacilityListUser;
   focus: Facility | null;
+  isLoading: boolean;
   onFocus: (facility: Facility) => void;
   onOpenSymptom: () => void;
 }) {
@@ -406,6 +416,12 @@ function NearbyPanel({
         facilities={facilities}
         user={user}
         focus={focus}
+        emptyTitle={isLoading ? "주변 병원 확인 중입니다" : "표시할 병원이 없습니다"}
+        emptyDescription={
+          isLoading
+            ? "현재 기준 위치 주변 병원을 불러오고 있습니다."
+            : "검색 기준 위치 주변에 지도에 표시할 수 있는 병원이 없습니다."
+        }
         onFocus={onFocus}
       />
     </div>
@@ -455,6 +471,8 @@ function ResultPanel({
   caution,
   facilities,
   user,
+  notice,
+  hiddenFacilityCount,
   focus,
   onFocus,
 }: {
@@ -465,6 +483,8 @@ function ResultPanel({
   caution: string;
   facilities: Facility[];
   user: FacilityListUser;
+  notice: string | null;
+  hiddenFacilityCount: number;
   focus: Facility | null;
   onFocus: (facility: Facility) => void;
 }) {
@@ -483,12 +503,20 @@ function ResultPanel({
         <p className="mt-2 text-base leading-7 font-black text-red-800">
           {caution}
         </p>
+        {(notice || hiddenFacilityCount > 0) && (
+          <p className="mt-3 rounded-2xl bg-amber-50 px-4 py-3 text-sm leading-6 font-black text-amber-800">
+            {notice ??
+              `좌표가 없는 추천 병원 ${hiddenFacilityCount}곳은 지도와 목록에서 제외했습니다.`}
+          </p>
+        )}
       </div>
       <FacilityList
         title="추천 병원"
         facilities={facilities}
         user={user}
         focus={focus}
+        emptyTitle="지도에 표시할 추천 병원이 없습니다"
+        emptyDescription="증상 판단은 완료됐지만, 추천 결과 중 좌표가 있는 병원이 없어 지도에는 표시하지 않았습니다."
         onFocus={onFocus}
       />
     </div>

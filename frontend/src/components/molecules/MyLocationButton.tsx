@@ -4,17 +4,22 @@ import { Button } from "@/components/ui/button";
 
 interface MyLocationButtonProps {
   hasUser: boolean;
+  bottomPx: number;
   onPanToUser: () => void;
   onFitAll: () => void;
 }
 
 export function MyLocationButton({
   hasUser,
+  bottomPx,
   onPanToUser,
   onFitAll,
 }: MyLocationButtonProps) {
   return (
-    <div className="absolute bottom-48 right-3 z-20 flex flex-col gap-2">
+    <div
+      className="absolute right-3 z-20 flex flex-col gap-2"
+      style={{ bottom: bottomPx }}
+    >
       {hasUser && (
         <Button
           type="button"
