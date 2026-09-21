@@ -1,0 +1,42 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["react", "oxc"],
+  "rules": {
+    "react/rules-of-hooks": "error",
+    "react/only-export-components": ["warn", { "allowConstantExport": true }]
+  },
+  "overrides": [
+    {
+      "files": ["src/components/**", "src/pages/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["@/api/*", "@/lib/*"],
+                "message": "컴포넌트는 훅을 통해서만 외부에 접근합니다"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/utils/**", "src/types/**", "src/constants/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["react", "@/api/*", "@/lib/*", "@/hooks/*"],
+                "message": "순수 레이어는 React와 부수효과에 의존하지 않습니다"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
