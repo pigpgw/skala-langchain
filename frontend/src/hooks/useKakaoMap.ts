@@ -78,10 +78,6 @@ export function useKakaoMap(
       map.setBounds(bounds, 40, 40, 40, 40);
       const maxLevel = deps.fitUser ? 8 : 9;
       if (map.getLevel() > maxLevel) map.setLevel(maxLevel);
-      if (userPos && deps.fitUser) {
-        map.setCenter(userPos);
-        if (map.getLevel() > 7) map.setLevel(7);
-      }
       return;
     }
 

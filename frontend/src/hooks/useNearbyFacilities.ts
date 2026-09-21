@@ -14,6 +14,7 @@ export function useNearbyFacilities(coords: Coords | null): {
     if (!coords) return;
 
     let cancelled = false;
+    setFacilities(null);
 
     triageApi
       .getNearby({ lat: coords.lat, lng: coords.lng })

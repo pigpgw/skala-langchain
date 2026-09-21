@@ -36,6 +36,10 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
 
+function hasMapCoords(facility: Facility) {
+  return facility.lat != null && facility.lng != null;
+}
+
 export function TriagePage() {
   const { status: geoStatus, coords } = useGeolocation();
   const nearbySearchCoords = coords ?? DEFAULT_MAP_CENTER;
@@ -48,10 +52,15 @@ export function TriagePage() {
   const dragRef = useRef({ moved: false, startHeight: 0, startY: 0 });
   const sheetHeightRef = useRef(sheetHeight);
 
-  const mapFacilities = useMemo(
+  const rawFacilities = useMemo(
     () => (result ? result.facilities : nearby || []),
     [nearby, result],
   );
+  const mapFacilities = useMemo(
+    () => rawFacilities.filter(hasMapCoords),
+    [rawFacilities],
+  );
+  const hiddenFacilityCount = rawFacilities.length - mapFacilities.length;
   const sortedFacilities = useMemo(
     () =>
       [...mapFacilities].sort(
@@ -65,7 +74,9 @@ export function TriagePage() {
       ? "주변 병원 확인 중"
       : mapFacilities.length > 0
         ? `가까운 병원 ${mapFacilities.length}곳`
-        : "주변 병원 없음";
+        : rawFacilities.length > 0
+          ? "지도 표시 가능한 병원 없음"
+          : "주변 병원 없음";
   const visiblePanelView =
     result && panelView === "symptom" && !isLoading ? "result" : panelView;
   const contentMaxHeight = Math.max(80, sheetHeight - SHEET_HEADER_HEIGHT);
@@ -198,6 +209,11 @@ export function TriagePage() {
             {mapFacilities.length > 0 ? `${mapFacilities.length}곳` : "확인 중"}
           </span>
           <span className="text-slate-800">{caption}</span>
+          {hiddenFacilityCount > 0 && (
+            <span className="rounded-full bg-amber-50 px-2.5 py-1 text-amber-800">
+              좌표 없음 {hiddenFacilityCount}곳 제외
+            </span>
+          )}
           <LocationSummary status={geoStatus} />
         </div>
       </div>
