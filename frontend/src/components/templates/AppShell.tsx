@@ -15,7 +15,7 @@ const guideSteps: Step[] = [
     target: '[data-tour="map-summary"]',
     title: "1. 지도를 먼저 봅니다",
     content:
-      "지도에는 기본 지역 기준 병원이 먼저 보이고, 위치가 잡히면 내 위치 기준으로 바뀝니다.",
+      "위치 권한을 허용하면 내 위치를 먼저 잡고, 그 위치 기준 가까운 병원을 보여줍니다.",
     placement: "bottom",
     skipBeacon: true,
   },
@@ -23,22 +23,22 @@ const guideSteps: Step[] = [
     target: '[data-tour="location-status"]',
     title: "2. 내 위치 상태입니다",
     content:
-      "큰 파란색 표시는 현재 위치입니다. 위치 권한을 허용하면 주변 병원을 자동으로 찾습니다.",
+      "파란 현재위치 점이 내 위치입니다. 위치가 부정확하면 현재 위치 다시 찾기를 누를 수 있습니다.",
     placement: "bottom",
     skipBeacon: true,
   },
   {
     target: '[data-tour="facility-list"]',
-    title: "3. 가까운 병원 목록입니다",
+    title: "3. 바로 병원을 볼 수 있습니다",
     content:
-      "아래 패널에서 가까운 병원을 고르면 지도에서 위치를 확인할 수 있습니다.",
+      "지도만 보고 싶으면 가까운 병원 목록에서 병원을 고르고 위치를 확인합니다.",
     placement: "top",
     skipBeacon: true,
   },
   {
     target: '[data-tour="symptom-open-button"]',
-    title: "4. 증상으로 병원을 안내받습니다",
-    content: "이 버튼을 누르면 증상을 입력하고 필요한 진료 방향과 주변 병원을 확인할 수 있습니다.",
+    title: "4. AI 증상 안내를 받을 수 있습니다",
+    content: "어디로 가야 할지 애매하면 증상을 입력하고 진료 방향과 주변 병원을 확인합니다.",
     placement: "top",
     skipBeacon: true,
   },

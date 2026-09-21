@@ -5,6 +5,7 @@ import { getCurrentPosition } from "@/lib/geolocation";
 import type { Coords } from "@/types/common";
 
 export type GeoStatus = "pending" | "ready" | "fallback";
+const MAX_USABLE_ACCURACY_M = 3000;
 
 export function useGeolocation(): {
   status: GeoStatus;
@@ -13,15 +14,28 @@ export function useGeolocation(): {
   requestLocation: () => void;
 } {
   const [status, setStatus] = useState<GeoStatus>("pending");
-  const [coords, setCoords] = useState<Coords | null>(DEFAULT_MAP_CENTER);
+  const [coords, setCoords] = useState<Coords | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const requestLocation = useCallback(() => {
     setStatus("pending");
+    setCoords(null);
     setErrorMessage(null);
 
     getCurrentPosition()
       .then((nextCoords) => {
+        if (
+          nextCoords.accuracy != null &&
+          nextCoords.accuracy > MAX_USABLE_ACCURACY_M
+        ) {
+          setCoords(DEFAULT_MAP_CENTER);
+          setStatus("fallback");
+          setErrorMessage(
+            `현재 위치 오차가 약 ${Math.round(nextCoords.accuracy)}m라 정확한 내 위치로 사용하지 않았습니다.`,
+          );
+          return;
+        }
+
         setCoords(nextCoords);
         setStatus("ready");
       })

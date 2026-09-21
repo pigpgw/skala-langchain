@@ -1,19 +1,19 @@
-import { LocateFixed, Maximize2 } from "lucide-react";
+import { LocateFixed, RefreshCw } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 
 interface MyLocationButtonProps {
   hasUser: boolean;
   bottomPx: number;
+  onRequestLocation: () => void;
   onPanToUser: () => void;
-  onFitAll: () => void;
 }
 
 export function MyLocationButton({
   hasUser,
   bottomPx,
+  onRequestLocation,
   onPanToUser,
-  onFitAll,
 }: MyLocationButtonProps) {
   return (
     <div
@@ -33,13 +33,18 @@ export function MyLocationButton({
       )}
       <Button
         type="button"
-        variant="secondary"
-        className="h-12 w-12 rounded-full border-2 border-slate-300 bg-white p-0 text-slate-950 shadow-md hover:bg-blue-50"
-        onClick={onFitAll}
-        title="병원 마커 전체 보기"
-        aria-label="병원 마커 전체 보기"
+        variant={hasUser ? "secondary" : "default"}
+        className={[
+          "h-12 w-12 rounded-full p-0 shadow-md",
+          hasUser
+            ? "border-2 border-slate-300 bg-white text-slate-950 hover:bg-blue-50"
+            : "border-2 border-white bg-blue-700 text-white shadow-xl shadow-blue-200 hover:bg-blue-800",
+        ].join(" ")}
+        onClick={onRequestLocation}
+        title="현재 위치 다시 찾기"
+        aria-label="현재 위치 다시 찾기"
       >
-        <Maximize2 className="h-5 w-5" />
+        <RefreshCw className="h-5 w-5" />
       </Button>
     </div>
   );

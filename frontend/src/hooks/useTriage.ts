@@ -8,7 +8,7 @@ export function useTriage(): {
   result: TriageResponse | null;
   isLoading: boolean;
   error: ApiError | null;
-  submit: (req: TriageRequest) => Promise<void>;
+  submit: (req: TriageRequest) => Promise<TriageResponse | null>;
   reset: () => void;
 } {
   const [result, setResult] = useState<TriageResponse | null>(null);
@@ -23,8 +23,10 @@ export function useTriage(): {
     try {
       const data = await triageApi.submit(req);
       setResult(data);
+      return data;
     } catch (err) {
       setError(err instanceof ApiError ? err : new ApiError(0, "요청 실패"));
+      return null;
     } finally {
       setIsLoading(false);
     }

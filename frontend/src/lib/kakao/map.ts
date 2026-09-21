@@ -6,19 +6,20 @@ import type { Kakao, KakaoLatLngBounds, KakaoMapInstance } from "./types";
 const USER_PIN =
   "data:image/svg+xml;charset=utf-8," +
   encodeURIComponent(
-    '<svg xmlns="http://www.w3.org/2000/svg" width="72" height="72" viewBox="0 0 72 72">' +
-      '<circle cx="36" cy="36" r="30" fill="#1d4ed8" stroke="#ffffff" stroke-width="8"/>' +
-      '<circle cx="36" cy="36" r="18" fill="#ffffff"/>' +
-      '<circle cx="36" cy="36" r="9" fill="#1d4ed8"/>' +
-      '<path d="M36 4v10M36 58v10M4 36h10M58 36h10" stroke="#1d4ed8" stroke-width="5" stroke-linecap="round"/>' +
+    '<svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" viewBox="0 0 56 56">' +
+      '<circle cx="28" cy="28" r="20" fill="#2563eb" fill-opacity=".18"/>' +
+      '<circle cx="28" cy="28" r="11" fill="#2563eb" stroke="#ffffff" stroke-width="5"/>' +
+      '<circle cx="28" cy="28" r="4" fill="#ffffff"/>' +
       "</svg>",
   );
 
-const USER_PIN_SIZE = 52;
+const USER_PIN_SIZE = 40;
 const HOSPITAL_PIN_WIDTH = 40;
 const HOSPITAL_PIN_HEIGHT = 48;
 const EMERGENCY_PIN_WIDTH = 44;
 const EMERGENCY_PIN_HEIGHT = 52;
+const FACILITY_FOCUS_LEVEL = 5;
+const INITIAL_REGION_LEVEL = 7;
 
 const HOSPITAL_PIN =
   "data:image/svg+xml;charset=utf-8," +
@@ -47,13 +48,20 @@ export interface FacilityMarkerHandle {
   infoWindow: unknown;
 }
 
-export function createMap(kakao: Kakao, el: HTMLDivElement): KakaoMapInstance {
+export interface UserMarkerHandle {
+  pos: unknown;
+  marker: unknown;
+  infoWindow: unknown;
+}
+
+export function createMap(
+  kakao: Kakao,
+  el: HTMLDivElement,
+  initialCenter: Coords = DEFAULT_MAP_CENTER,
+): KakaoMapInstance {
   const map = new kakao.maps.Map(el, {
-    center: new kakao.maps.LatLng(
-      DEFAULT_MAP_CENTER.lat,
-      DEFAULT_MAP_CENTER.lng,
-    ),
-    level: 7,
+    center: new kakao.maps.LatLng(initialCenter.lat, initialCenter.lng),
+    level: INITIAL_REGION_LEVEL,
   });
 
   map.addControl(
@@ -91,12 +99,14 @@ export function addUserMarker(
     zIndex: 1000,
   });
 
-  new kakao.maps.InfoWindow({
+  const infoWindow = new kakao.maps.InfoWindow({
     content:
       '<div style="padding:10px 16px;font-size:18px;font-weight:900;color:#1d4ed8;white-space:nowrap">내 위치</div>',
-  }).open(map, userMarker);
+  });
 
-  return userPos;
+  infoWindow.open(map, userMarker);
+
+  return { pos: userPos, marker: userMarker, infoWindow };
 }
 
 export function addFacilityMarker(
@@ -156,7 +166,7 @@ export function panToFacility(
 ) {
   if (facility.lat == null || facility.lng == null) return;
   map.panTo(new kakao.maps.LatLng(facility.lat, facility.lng));
-  map.setLevel(5);
+  map.setLevel(FACILITY_FOCUS_LEVEL);
 }
 
 function facilityLabel(f: Facility) {

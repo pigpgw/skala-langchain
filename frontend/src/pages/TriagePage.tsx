@@ -41,12 +41,21 @@ function hasMapCoords(facility: Facility) {
 }
 
 export function TriagePage() {
-  const { status: geoStatus, coords } = useGeolocation();
-  const nearbySearchCoords = coords ?? DEFAULT_MAP_CENTER;
+  const {
+    status: geoStatus,
+    coords,
+    errorMessage: geoErrorMessage,
+    requestLocation,
+  } = useGeolocation();
+  const nearbySearchCoords =
+    geoStatus === "pending" ? null : coords ?? DEFAULT_MAP_CENTER;
   const { facilities: nearby, isLoading: isNearbyLoading } =
     useNearbyFacilities(nearbySearchCoords);
   const { result, isLoading, error, submit } = useTriage();
   const [focus, setFocus] = useState<Facility | null>(null);
+  const [visibleFacilities, setVisibleFacilities] = useState<Facility[] | null>(
+    null,
+  );
   const [panelView, setPanelView] = useState<PanelView>("nearby");
   const [sheetHeight, setSheetHeight] = useState(() => getSheetStops().mid);
   const [isDraggingSheet, setIsDraggingSheet] = useState(false);
@@ -61,33 +70,52 @@ export function TriagePage() {
     () => rawFacilities.filter(hasMapCoords),
     [rawFacilities],
   );
+  const shouldRenderMap = geoStatus !== "pending";
+  const displayFacilities =
+    shouldRenderMap && visibleFacilities !== null
+      ? visibleFacilities
+      : mapFacilities;
+  const isFilteredByViewport =
+    shouldRenderMap &&
+    visibleFacilities !== null &&
+    displayFacilities.length === 0 &&
+    mapFacilities.length > 0;
   const hiddenFacilityCount = rawFacilities.length - mapFacilities.length;
   const actualUserCoords = geoStatus === "ready" ? coords : null;
   const mapCountLabel =
-    isNearbyLoading && !result ? "확인 중" : `${mapFacilities.length}곳`;
+    (geoStatus === "pending" || isNearbyLoading) && !result
+      ? "확인 중"
+      : `${displayFacilities.length}곳`;
   const sortedFacilities = useMemo(
     () =>
-      [...mapFacilities].sort(
+      [...displayFacilities].sort(
         (a, b) => (a.distance_km ?? 9999) - (b.distance_km ?? 9999),
       ),
-    [mapFacilities],
+    [displayFacilities],
   );
   const caption = result
     ? "증상 안내 결과"
-    : isNearbyLoading
+    : geoStatus === "pending"
+      ? "내 위치 확인 중"
+      : isNearbyLoading
       ? "주변 병원 확인 중"
-      : mapFacilities.length > 0
-        ? `가까운 병원 ${mapFacilities.length}곳`
+      : displayFacilities.length > 0
+        ? `현재 화면 병원 ${displayFacilities.length}곳`
+        : isFilteredByViewport
+          ? "현재 화면 병원 없음"
         : rawFacilities.length > 0
           ? "지도 표시 가능한 병원 없음"
           : "주변 병원 없음";
-  const visiblePanelView =
-    result && panelView === "symptom" && !isLoading ? "result" : panelView;
+  const visiblePanelView = panelView;
   const contentMaxHeight = Math.max(80, sheetHeight - SHEET_HEADER_HEIGHT);
 
   useEffect(() => {
     sheetHeightRef.current = sheetHeight;
   }, [sheetHeight]);
+
+  useEffect(() => {
+    setVisibleFacilities(null);
+  }, [mapFacilities]);
 
   useEffect(() => {
     function syncSheetHeight() {
@@ -111,15 +139,18 @@ export function TriagePage() {
     return () => window.clearTimeout(timer);
   }, [nearby]);
 
-  function handleSubmit(values: SymptomFormValues) {
-    void submit(
+  async function handleSubmit(values: SymptomFormValues) {
+    const nextResult = await submit(
       buildTriageRequest({
         symptom: values.symptom,
-        coords,
+        coords: geoStatus === "pending" ? null : coords,
         sido: values.sido,
         sigungu: values.sigungu,
       }),
     );
+    if (!nextResult) return;
+    setFocus(null);
+    setPanelView("result");
   }
 
   function snapSheet(nextHeight: number) {
@@ -196,13 +227,29 @@ export function TriagePage() {
   return (
     <main className="relative h-[calc(100dvh-8.75rem)] overflow-hidden bg-slate-100">
       <section data-tour="map-section" className="absolute inset-0">
-        <FacilityMap
-          user={actualUserCoords}
-          facilities={mapFacilities}
-          fitUser={!result}
-          focus={focus}
-          controlsBottomPx={sheetHeight + 12}
-        />
+        {shouldRenderMap ? (
+          <FacilityMap
+            user={actualUserCoords}
+            facilities={mapFacilities}
+            fitUser={!result}
+            focus={focus}
+            controlsBottomPx={sheetHeight + 12}
+            viewportBottomPx={sheetHeight}
+            onVisibleFacilitiesChange={setVisibleFacilities}
+            onRequestLocation={requestLocation}
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center bg-blue-50 px-6 text-center">
+            <div className="rounded-3xl border-2 border-blue-100 bg-white px-5 py-4 shadow-lg shadow-blue-100">
+              <p className="text-xl font-black text-slate-950">
+                내 위치를 확인하고 있습니다
+              </p>
+              <p className="mt-2 text-base leading-7 font-bold text-slate-600">
+                위치 권한을 허용하면 현재 위치 기준으로 병원을 찾습니다.
+              </p>
+            </div>
+          </div>
+        )}
       </section>
 
       <div className="absolute left-3 right-3 top-3 z-30">
@@ -219,7 +266,7 @@ export function TriagePage() {
               좌표 없음 {hiddenFacilityCount}곳 제외
             </span>
           )}
-          <LocationSummary status={geoStatus} />
+          <LocationSummary status={geoStatus} errorMessage={geoErrorMessage} />
         </div>
       </div>
 
@@ -260,6 +307,7 @@ export function TriagePage() {
                 user={actualUserCoords}
                 focus={focus}
                 isLoading={isNearbyLoading}
+                isFilteredByViewport={isFilteredByViewport}
                 onFocus={setFocus}
                 onOpenSymptom={() => setPanelView("symptom")}
               />
@@ -309,13 +357,13 @@ function PanelTabs({
       <PanelTab
         active={current === "nearby"}
         icon={ListChecks}
-        label="병원"
+        label="가까운 병원"
         onClick={() => onChange("nearby")}
       />
       <PanelTab
         active={current === "symptom"}
         icon={ClipboardList}
-        label="증상 안내"
+        label="AI 증상 안내"
         tour="symptom-open-button"
         onClick={() => onChange("symptom")}
       />
@@ -323,7 +371,7 @@ function PanelTabs({
         active={current === "result"}
         disabled={!hasResult}
         icon={Stethoscope}
-        label="결과"
+        label="안내 결과"
         onClick={() => onChange("result")}
       />
     </div>
@@ -332,14 +380,18 @@ function PanelTabs({
 
 function LocationSummary({
   status,
+  errorMessage,
 }: {
   status: ReturnType<typeof useGeolocation>["status"];
+  errorMessage: string | null;
 }) {
   const label =
     status === "ready"
       ? "실제 위치 기준"
       : status === "pending"
         ? "위치 확인 중"
+        : errorMessage?.includes("오차")
+          ? "위치 오차 큼"
         : "광주 기준 위치";
 
   return (
@@ -376,7 +428,7 @@ function PanelTab({
       disabled={disabled}
       onClick={onClick}
       className={[
-        "flex min-h-11 items-center justify-center gap-1.5 rounded-xl text-base font-black transition-colors",
+        "flex min-h-11 items-center justify-center gap-1 rounded-xl px-1 text-sm font-black transition-colors",
         active ? "bg-blue-700 text-white shadow-sm" : "bg-white text-slate-700",
         disabled ? "opacity-45" : "hover:text-blue-800",
       ].join(" ")}
@@ -392,6 +444,7 @@ function NearbyPanel({
   user,
   focus,
   isLoading,
+  isFilteredByViewport,
   onFocus,
   onOpenSymptom,
 }: {
@@ -399,27 +452,44 @@ function NearbyPanel({
   user: FacilityListUser;
   focus: Facility | null;
   isLoading: boolean;
+  isFilteredByViewport: boolean;
   onFocus: (facility: Facility) => void;
   onOpenSymptom: () => void;
 }) {
   return (
     <div className="space-y-3">
+      <div className="rounded-2xl border-2 border-blue-100 bg-blue-50 px-4 py-3">
+        <p className="text-base leading-6 font-black text-slate-950">
+          병원을 바로 찾거나, 증상으로 안내받으세요.
+        </p>
+        <p className="mt-1 text-sm leading-6 font-bold text-slate-600">
+          지도만 보고 싶으면 아래 병원을 고르고, 어디로 가야 할지 애매하면 AI 안내를 받습니다.
+        </p>
+      </div>
       <button
         type="button"
         onClick={onOpenSymptom}
         className="flex min-h-14 w-full items-center justify-center rounded-2xl bg-blue-700 px-4 text-xl font-black text-white shadow-lg shadow-blue-200"
       >
-        증상 입력하고 병원 안내받기
+        AI로 증상 안내받기
       </button>
       <FacilityList
         title="가까운 병원"
         facilities={facilities}
         user={user}
         focus={focus}
-        emptyTitle={isLoading ? "주변 병원 확인 중입니다" : "표시할 병원이 없습니다"}
+        emptyTitle={
+          isLoading
+            ? "주변 병원 확인 중입니다"
+            : isFilteredByViewport
+              ? "현재 화면에 보이는 병원이 없습니다"
+              : "표시할 병원이 없습니다"
+        }
         emptyDescription={
           isLoading
             ? "현재 기준 위치 주변 병원을 불러오고 있습니다."
+            : isFilteredByViewport
+              ? "지도를 축소하거나 이동하면 주변 병원이 다시 목록에 표시됩니다."
             : "검색 기준 위치 주변에 지도에 표시할 수 있는 병원이 없습니다."
         }
         onFocus={onFocus}
@@ -491,6 +561,7 @@ function ResultPanel({
   return (
     <div className="space-y-3">
       <div className="rounded-3xl border-2 border-slate-200 bg-white p-4">
+        <p className="mb-3 text-sm font-black text-blue-700">AI 안내 결과</p>
         <div className="flex flex-wrap items-center gap-2">
           <SeverityBadge severity={severity} label={severityLabel} />
           <strong className="text-lg font-black text-slate-950">

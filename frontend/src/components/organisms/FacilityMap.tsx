@@ -11,6 +11,9 @@ interface FacilityMapProps {
   fitUser: boolean;
   focus: Facility | null;
   controlsBottomPx: number;
+  viewportBottomPx: number;
+  onVisibleFacilitiesChange: (facilities: Facility[]) => void;
+  onRequestLocation: () => void;
 }
 
 export function FacilityMap({
@@ -19,18 +22,27 @@ export function FacilityMap({
   fitUser,
   focus,
   controlsBottomPx,
+  viewportBottomPx,
+  onVisibleFacilitiesChange,
+  onRequestLocation,
 }: FacilityMapProps) {
   const ref = useRef<HTMLDivElement | null>(null);
-  const { panToUser, fitAll, error } = useKakaoMap(ref, {
+  const { panToUser, error } = useKakaoMap(ref, {
     user,
     facilities,
     fitUser,
     focus,
+    viewportBottomPx,
+    onVisibleFacilitiesChange,
   });
 
   return (
     <div className="relative h-full min-w-0 bg-blue-50">
-      <div ref={ref} className="h-full w-full bg-blue-50" />
+      <div
+        ref={ref}
+        className="absolute left-0 right-0 top-0 bg-blue-50"
+        style={{ bottom: viewportBottomPx }}
+      />
       {error && (
         <p className="absolute left-3 right-3 top-3 rounded-2xl border-2 border-red-200 bg-white px-4 py-3 text-base font-black text-red-700 shadow-sm">
           {error}
@@ -40,8 +52,8 @@ export function FacilityMap({
       <MyLocationButton
         hasUser={Boolean(user)}
         bottomPx={controlsBottomPx}
+        onRequestLocation={onRequestLocation}
         onPanToUser={panToUser}
-        onFitAll={fitAll}
       />
     </div>
   );
@@ -62,7 +74,7 @@ function MapLegend({ bottomPx }: { bottomPx: number }) {
         일반
       </div>
       <div className="mt-1 flex items-center gap-2">
-        <span className="h-3 w-3 rounded-full border-2 border-blue-700 bg-white" />
+        <span className="h-3 w-3 rounded-full border-2 border-white bg-blue-600 shadow-sm ring-1 ring-blue-200" />
         내 위치
       </div>
     </div>

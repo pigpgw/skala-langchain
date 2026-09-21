@@ -35,18 +35,17 @@ export function HomePage() {
       <section className="space-y-6">
         <div>
           <p className="mb-4 inline-flex rounded-full bg-blue-100 px-4 py-2 text-base font-black text-blue-800">
-            쉽고 크게 보는 병원 안내
+            병원 찾기와 AI 증상 안내
           </p>
           <h1 className="text-4xl leading-[1.12] font-black tracking-tight text-slate-950">
-            어디가 아픈지 적으면
+            병원을 바로 찾거나
             <span className="block text-blue-700">
-              가야 할 곳을 안내합니다.
+              증상으로 안내받으세요.
             </span>
           </h1>
           <p className="mt-5 text-lg leading-8 font-semibold text-slate-700">
-            복잡한 화면 없이 증상 입력, 진료 안내, 가까운 병원 확인을 차례대로
-            보여줍니다. 큰 글씨와 넓은 지도로 보호자와 함께 보기 쉽게
-            만들었습니다.
+            내 위치 기준 가까운 병원을 바로 보고, 어디로 가야 할지 애매하면
+            AI가 증상에 맞는 진료 방향과 병원을 안내합니다.
           </p>
 
           <div className="mt-7 grid gap-3">
@@ -54,7 +53,7 @@ export function HomePage() {
               to="/triage"
               className="inline-flex min-h-14 items-center justify-center gap-3 rounded-2xl bg-blue-700 px-5 text-xl font-black text-white shadow-lg shadow-blue-200 transition-colors hover:bg-blue-800"
             >
-              진료 안내 시작
+              병원 찾기 시작
               <ArrowRight className="h-6 w-6" />
             </Link>
             <button

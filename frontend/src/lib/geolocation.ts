@@ -13,7 +13,19 @@ function geolocationErrorMessage(error: GeolocationPositionError) {
   }
 }
 
-export function getCurrentPosition(timeout = 12000): Promise<Coords> {
+const PRECISE_ACCURACY_M = 100;
+const ACCEPTABLE_ACCURACY_M = 1000;
+const MIN_WAIT_MS = 2500;
+
+function toCoords(pos: GeolocationPosition): Coords {
+  return {
+    lat: pos.coords.latitude,
+    lng: pos.coords.longitude,
+    accuracy: pos.coords.accuracy,
+  };
+}
+
+export function getCurrentPosition(timeout = 15000): Promise<Coords> {
   return new Promise((resolve, reject) => {
     if (!window.isSecureContext) {
       reject(
@@ -29,12 +41,71 @@ export function getCurrentPosition(timeout = 12000): Promise<Coords> {
       return;
     }
 
-    navigator.geolocation.getCurrentPosition(
-      (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-      (error) => reject(new Error(geolocationErrorMessage(error))),
+    let best: Coords | null = null;
+    let settled = false;
+    let watchId: number | null = null;
+    const startedAt = Date.now();
+
+    function cleanup() {
+      if (watchId != null) {
+        navigator.geolocation.clearWatch(watchId);
+      }
+      window.clearTimeout(timeoutId);
+    }
+
+    function finish(coords: Coords) {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      resolve(coords);
+    }
+
+    function fail(error: GeolocationPositionError) {
+      if (settled) return;
+      if (best) {
+        finish(best);
+        return;
+      }
+      settled = true;
+      cleanup();
+      reject(new Error(geolocationErrorMessage(error)));
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      if (best) {
+        finish(best);
+        return;
+      }
+      settled = true;
+      if (watchId != null) navigator.geolocation.clearWatch(watchId);
+      reject(new Error("위치 확인 시간이 초과되었습니다. 다시 시도해 주세요."));
+    }, timeout);
+
+    watchId = navigator.geolocation.watchPosition(
+      (pos) => {
+        const coords = toCoords(pos);
+        const accuracy = coords.accuracy ?? Number.POSITIVE_INFINITY;
+
+        if (!best || accuracy < (best.accuracy ?? Number.POSITIVE_INFINITY)) {
+          best = coords;
+        }
+
+        if (accuracy <= PRECISE_ACCURACY_M) {
+          finish(coords);
+          return;
+        }
+
+        if (
+          accuracy <= ACCEPTABLE_ACCURACY_M &&
+          Date.now() - startedAt >= MIN_WAIT_MS
+        ) {
+          finish(coords);
+        }
+      },
+      fail,
       {
         enableHighAccuracy: true,
-        maximumAge: 30000,
+        maximumAge: 0,
         timeout,
       },
     );
